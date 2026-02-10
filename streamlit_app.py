@@ -224,7 +224,9 @@ consultar = st.sidebar.button("Consultar", type="primary")
 # =========================
 # EXECUÇÃO
 # =========================
-if consultar:
+
+if consultar and cidade_sel != "(todas)":
+
     df_filtered = apply_filters(df_all)
     # df = df_filtered.copy()
     df = df_filtered.copy()

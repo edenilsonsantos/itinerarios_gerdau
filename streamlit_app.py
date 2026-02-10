@@ -6,6 +6,8 @@ import requests
 import streamlit as st
 import pydeck as pdk
 
+# faz o importe de credenciais de .streamlit/secrets.toml
+
 
 
 # =========================
@@ -15,6 +17,7 @@ st.set_page_config(
     page_title="Pontos de Ônibus - Fretados",
     layout="wide",
 )
+
 
 st.title("🚌 Pontos de Ônibus (Fretados Gerdau)")
 st.caption("Filtro por Cidade, Bairro e Sentido + mapa com pinos geográficos.")
@@ -131,9 +134,7 @@ cidade_sel = st.sidebar.selectbox("Cidade Origem (Onde você mora)", ["(todas)"]
 
 df_bairro = df_all if cidade_sel == "(todas)" else df_all[df_all["cidade"] == cidade_sel]
 
-# Bairro
-bairros = sorted(df_bairro["bairro"].dropna().unique())
-bairro_sel = st.sidebar.selectbox("Bairro", ["(todos)"] + bairros)
+
 
 # =========================
 # SENTIDO (IDA / VOLTA)
@@ -147,21 +148,34 @@ sentido_opts = [
 
 sentido_sel = st.sidebar.radio("Sentido", sentido_opts, index=0)
 
-consultar = st.sidebar.button("Consultar", type="primary")
+
 
 
 # =========================
 # FILTROS
 # =========================
+
+def filter_sentido(df):
+
+    out = df.copy()
+
+    # Sentido
+    if "sentido" in out.columns:
+
+        if sentido_sel.startswith("Saindo"):
+            out = out[out["sentido"].str.lower().str.startswith("ida")]
+
+        else:
+            out = out[out["sentido"].str.lower().str.startswith("volta")]
+    return out
+
+
 def apply_filters(df):
 
     out = df.copy()
 
     if cidade_sel != "(todas)":
         out = out[out["cidade"] == cidade_sel]
-
-    if bairro_sel != "(todos)":
-        out = out[out["bairro"] == bairro_sel]
 
     # Sentido
     if "sentido" in out.columns:
@@ -172,26 +186,45 @@ def apply_filters(df):
         else:
             out = out[out["sentido"].str.lower().str.startswith("volta")]
 
+    if bairro_sel != "(todos)":
+        out = out[out["bairro"] == bairro_sel]
+
+
     # selecionar apenas as colunas relevantes para exibição, deixar de fora ID, created_at, updated_at, e tambem nao mostrar as colunas em que a coluna toda está vazia
     out = out[["rua", "referencia", "bairro", "cidade", "sentido", "horario_1", "horario_2", "horario_3", "horario_reuniao", "codigo_linha", "linha"]]
 
-    # Converte strings vazias em NaN
-    out = out.replace("", pd.NA)
+    # if coluna reuniao estiver vazia, remover a coluna
+    if out["horario_reuniao"].isna().all():
+        out.drop(columns=["horario_reuniao"])
 
-    # Remove colunas totalmente vazias, SOMENTE SE AS COLUNAS FOREM ("horario_2", "horario_3", "horario_reuniao")
-    cols_to_check = ["horario_2", "horario_3", "horario_reuniao"]
-    out = out.dropna(axis=1, how="all", subset=cols_to_check)
+    if out["horario_2"].isna().all():
+        out.drop(columns=["horario_2"])
+
+    if out["horario_3"].isna().all():
+        out.drop(columns=["horario_3"])
+
 
     out = out.reset_index(drop=True)
 
     return out
+
+df_bairro = filter_sentido(df_bairro)
+
+# Bairro
+bairros = sorted(df_bairro["bairro"].dropna().unique())
+bairro_sel = st.sidebar.selectbox("Bairro", ["(todos)"] + bairros)
+
+
+consultar = st.sidebar.button("Consultar", type="primary")
+
+
+
 
 
 # =========================
 # EXECUÇÃO
 # =========================
 if consultar:
-
     df_filtered = apply_filters(df_all)
     # df = df_filtered.copy()
     df = df_filtered.copy()

@@ -127,7 +127,7 @@ st.sidebar.header("🔎 Filtros")
 
 # Cidade
 cidades = sorted(df_all["cidade"].dropna().unique())
-cidade_sel = st.sidebar.selectbox("Cidade Origem", ["(todas)"] + cidades)
+cidade_sel = st.sidebar.selectbox("Cidade Origem (Onde você mora)", ["(todas)"] + cidades)
 
 df_bairro = df_all if cidade_sel == "(todas)" else df_all[df_all["cidade"] == cidade_sel]
 
@@ -178,8 +178,9 @@ def apply_filters(df):
     # Converte strings vazias em NaN
     out = out.replace("", pd.NA)
 
-    # Remove colunas totalmente vazias
-    out = out.dropna(axis=1, how="all")
+    # Remove colunas totalmente vazias, SOMENTE SE AS COLUNAS FOREM ("horario_2", "horario_3", "horario_reuniao")
+    cols_to_check = ["horario_2", "horario_3", "horario_reuniao"]
+    out = out.dropna(axis=1, how="all", subset=cols_to_check)
 
     out = out.reset_index(drop=True)
 
